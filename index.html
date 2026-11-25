@@ -359,7 +359,7 @@ const PCOL=["#ff8fbf","#ff4f8b","#ffd1e3","#f07ad8","#ffb39a"];
 let lastNow=performance.now();
 const FAR=DIST+3;
 // ---------- funny intro: ASCII butt farts out the bouquet ----------
-const INTRO=2.4;
+const FIRE2=3.4,LAND2=4.7;
 const BUTT=[
 "    .-'''''-.   .-'''''-.    ",
 "  .'         `Y'         `.  ",
@@ -372,61 +372,108 @@ const BUTT=[
 const ip=[];let fartDone=false;
 const GAS="~≈oO°~";const FLW=["❀","✿","*","@","❀","♥"];const FCOL=["#ff5f9e","#ff2d55","#ffc1d8","#e070ff","#ffb38a"];
 function drawIntro(T0,dt){
-  if(T0>4.5&&!ip.length)return;
+  if(T0>7.5&&!ip.length)return;
   const bf=Math.min(24,W/(31*.62)*.86),bw=bf*.62,bh=bf*1.05;
   const x0=W/2-31*bw/2,yBase=H*.58;
+  // fart 1 (heart) at F1, fart 2 (bouquet) at F2
+  const F1=1.35,F2=FIRE2,EXIT=LAND2;
+  const inF=(f,len)=>T0>f&&T0<f+len;
   let yo=0,alpha=1;
   if(T0<.2)alpha=0;
   else if(T0<.7)yo=(1-ease((T0-.2)/.5))*H*.6;
-  else if(T0>2.75){const k=Math.min(1,(T0-2.75)/.6);yo=k*k*H*.8;alpha=1-k}
+  else if(T0>EXIT){const k=Math.min(1,(T0-EXIT)/.6);yo=k*k*H*.8;alpha=1-k}
   let sx=0,sy=0;
-  if(T0>1.35&&T0<1.95){sx=(Math.random()-.5)*10;sy=(Math.random()-.5)*8}
+  if(inF(F1,.35)){sx=(Math.random()-.5)*5;sy=(Math.random()-.5)*4}
+  if(inF(F2,.6)){sx=(Math.random()-.5)*11;sy=(Math.random()-.5)*9}
   const crackX=x0+15.5*bw+sx,crackY=yBase+7*bh+yo+sy;
-  // spawn
-  if(T0>1.35&&T0<1.95){
-    for(let k=0;k<Math.ceil(dt*90);k++){const a=Math.PI*(.15+Math.random()*.7),s=60+Math.random()*200;
-      ip.push({k:'g',x:crackX,y:crackY,vx:Math.cos(a)*s*(Math.random()<.5?-1:1)*1.2,vy:Math.sin(a)*s*.8,life:0,max:1.4+Math.random()*.8,c:GAS[Math.random()*GAS.length|0]})}
+  const gas=(n)=>{for(let k=0;k<n;k++){const a=Math.PI*(.15+Math.random()*.7),s=60+Math.random()*200;
+      ip.push({k:'g',x:crackX,y:crackY,vx:Math.cos(a)*s*(Math.random()<.5?-1:1)*1.2,vy:Math.sin(a)*s*.8,life:0,max:1.4+Math.random()*.8,c:GAS[Math.random()*GAS.length|0]})}};
+  if(inF(F1,.3))gas(Math.ceil(dt*45));
+  if(inF(F2,.6)){
+    gas(Math.ceil(dt*90));
     for(let k=0;k<Math.ceil(dt*45);k++)
       ip.push({k:'f',x:crackX,y:crackY,vx:(Math.random()-.5)*520,vy:-(200+Math.random()*520),life:0,max:2.2,c:FLW[Math.random()*FLW.length|0],col:FCOL[Math.random()*FCOL.length|0]});
   }
+  // the heart: out of the butt at F1, floats up, beats, then pops at POP
+  const POP=F2-.55;
+  if(T0>F1&&T0<POP){
+    const k=Math.min(1,(T0-F1)/1.0),e=1-Math.pow(1-k,3);
+    const hx=W/2+Math.sin(k*Math.PI*2)*W*.04,hy=lerp(crackY,H*.3,e);
+    const beat=T0>F1+1?1+.12*Math.max(0,Math.sin((T0-F1)*Math.PI*2.6)):1;
+    const sc=(.12+.88*e)*beat;
+    drawAsciiHeart(hx,hy,sc,bf);
+    if(!heartXY)heartXY=[0,0];heartXY[0]=hx;heartXY[1]=hy;
+  }
+  if(T0>=POP&&heartXY&&!popped){
+    popped=true;
+    for(let i=0;i<46;i++){const a=Math.random()*Math.PI*2,s=80+Math.random()*320;
+      ip.push({k:'f',x:heartXY[0],y:heartXY[1],vx:Math.cos(a)*s,vy:Math.sin(a)*s-120,life:0,max:1.8,c:["♥","♡","<3","*"][Math.random()*4|0],col:["#ff2d55","#ff5f9e","#ffc1d8","#e070ff"][Math.random()*4|0]})}
+  }
   if(alpha>0){
     ctx.save();ctx.globalAlpha=alpha;
-    ctx.font=`700 ${bf}px ui-monospace,"SF Mono",Menlo,Consolas,monospace`;ctx.textBaseline='top';
-    const squash=(T0>1.3&&T0<1.6)?Math.sin((T0-1.3)/.3*Math.PI)*.12:0;
+    ctx.font=`700 ${bf}px ui-monospace,"SF Mono",Menlo,Consolas,monospace`;ctx.textBaseline='top';ctx.textAlign='left';
+    const sq=f=>(T0>f-.05&&T0<f+.25)?Math.sin((T0-f+.05)/.3*Math.PI)*.12:0;
+    const squash=Math.max(sq(F1),sq(F2));
+    const wiggling=(T0>.7&&T0<F1)||(T0>POP+.1&&T0<F2);
     BUTT.forEach((ln,i)=>{
-      const wig=(T0>.7&&T0<1.35)?Math.sin(T0*22+i*.35)*5:0;
+      const wig=wiggling?Math.sin(T0*22+i*.35)*5:0;
       const yy=yBase+yo+sy+i*bh*(1-squash)+squash*bh*4;
       ctx.fillStyle='#ffc6a8';ctx.fillText(ln,x0+wig+sx,yy);
     });
-    // blush
     ctx.fillStyle='#ff6f9a';const wy=yBase+yo+sy+3.6*bh;
     ctx.fillText('~ ~',x0+6*bw+sx,wy);ctx.fillText('~ ~',x0+21*bw+sx,wy);
     ctx.restore();
   }
   // particles
-  ctx.font=`700 ${Math.round(bf*.9)}px ui-monospace,"SF Mono",Menlo,Consolas,monospace`;
   for(let j=ip.length-1;j>=0;j--){
     const p=ip[j];p.life+=dt;
     if(p.life>p.max){ip.splice(j,1);continue}
     if(p.k==='g'){p.vx*=.96;p.vy*=.96;p.x+=p.vx*dt;p.y+=p.vy*dt;
-      const a=(1-p.life/p.max)*.85;ctx.globalAlpha=a;ctx.fillStyle='rgb(175,215,85)';
-      const sz=Math.round(bf*(.7+p.life*.9));ctx.font=`700 ${sz}px ui-monospace,Menlo,monospace`;ctx.fillText(p.c,p.x,p.y)}
+      ctx.globalAlpha=(1-p.life/p.max)*.85;ctx.fillStyle='rgb(175,215,85)';
+      ctx.font=`700 ${Math.round(bf*(.7+p.life*.9))}px ui-monospace,Menlo,monospace`;ctx.fillText(p.c,p.x,p.y)}
     else{p.vy+=620*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;
       ctx.globalAlpha=Math.min(1,(p.max-p.life)*2);ctx.fillStyle=p.col;ctx.font=`700 ${Math.round(bf)}px ui-monospace,Menlo,monospace`;ctx.fillText(p.c,p.x,p.y)}
   }
   ctx.globalAlpha=1;
-  // sound effect text
-  if(T0>1.35&&T0<2.7){
-    const k=(T0-1.35),pop=Math.min(1,k/.15),fade=T0>2.2?1-(T0-2.2)/.5:1;
-    const fs=Math.min(W/8,46)*(.6+.4*pop);
+  // sound effects
+  const sfx=(f,txt,col,size,dur)=>{
+    if(T0<=f||T0>=f+dur)return;
+    const k=T0-f,pop=Math.min(1,k/.15),fade=k>dur-.5?(dur-k)/.5:1;
+    const fs=size*(.6+.4*pop);
     ctx.save();ctx.globalAlpha=Math.max(0,fade);ctx.translate(W/2+sx,crackY+fs*.9);ctx.rotate(-.08);
     ctx.font=`900 ${fs}px ui-monospace,"SF Mono",Menlo,Consolas,monospace`;ctx.textAlign='center';
-    ctx.fillStyle='#d6ff7a';ctx.fillText('PFFFRRRT!!',0,0);ctx.restore();
-  }
-  if(T0>2.9&&T0<4.3){
-    ctx.save();ctx.globalAlpha=Math.min(1,(4.3-T0)*2);ctx.font=`600 ${Math.round(bf*.7)}px ui-monospace,Menlo,monospace`;ctx.textAlign='center';
+    ctx.fillStyle=col;ctx.fillText(txt,0,0);ctx.restore();
+  };
+  sfx(F1,'pfft! ♥','#ff8fbf',Math.min(W/11,32),1.2);
+  sfx(F2,'PFFFRRRT!!','#d6ff7a',Math.min(W/8,46),1.35);
+  if(T0>EXIT+.15&&T0<EXIT+1.6){
+    ctx.save();ctx.globalAlpha=Math.min(1,(EXIT+1.6-T0)*2);ctx.font=`600 ${Math.round(bf*.7)}px ui-monospace,Menlo,monospace`;ctx.textAlign='center';
     ctx.fillStyle='#c9a0b5';ctx.fillText('(excuse me)',W/2,H*.9);ctx.restore();
   }
+}
+// ASCII heart, filled with "love", outlined with *
+const HEART=(()=>{const R=[],cols=25,rows=13;
+  for(let r=0;r<rows;r++){let line='';
+    for(let c=0;c<cols;c++){
+      const x=(c-(cols-1)/2)/((cols-1)/2)*1.25,y=1.25-r/(rows-1)*2.5;
+      const f=Math.pow(x*x+y*y-1,3)-x*x*y*y*y;
+      line+=f<=0?'#':' ';
+    }
+    R.push(line)}
+  // outline vs fill
+  return R.map((ln,r)=>{let n=0;return [...ln].map((ch,c)=>{if(ch!=='#'){n=0;return' '}
+    const nb=[[0,1],[0,-1],[1,0],[-1,0]].some(([dr,dc])=>{const l=R[r+dr];return !l||l[c+dc]!=='#'});
+    if(nb){n=0;return'*'}return 'LOVE'[(n++)%4];}).join('')});
+})();
+let heartXY=null,popped=false;
+function drawAsciiHeart(cx,cy,sc,bf){
+  const fs=Math.max(3,bf*.95*sc),cw2=fs*.62,ch2=fs*1.05;
+  const w=HEART[0].length*cw2,h=HEART.length*ch2;
+  ctx.save();ctx.font=`800 ${fs}px ui-monospace,"SF Mono",Menlo,Consolas,monospace`;ctx.textBaseline='top';ctx.textAlign='left';
+  HEART.forEach((ln,r)=>{for(let c=0;c<ln.length;c++){const k=ln[c];if(k===' ')continue;
+    ctx.fillStyle=k==='*'?'#ffd1e3':(r<HEART.length*.45?'#ff4f8b':'#e0204f');
+    ctx.fillText(k,cx-w/2+c*cw2,cy-h/2+r*ch2)}});
+  ctx.restore();
 }
 const STARS=[];{let sd=11;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
   const SC=['.','·','*','+','✦','.','·'],SCOL=['#ffd6e7','#e6d0ff','#fff3c4','#ffc2dc'];
@@ -436,7 +483,7 @@ function render(now){
   if(!heroVis){lastNow=now;requestAnimationFrame(render);return}
   const T0=(now-startT)/1000,dt=Math.min(.05,(now-lastNow)/1000);lastNow=now;
   // bouquet is fired out of the butt at FIRE, lands at LAND, then keeps blooming
-  const FIRE=1.45,LAND=2.75,t=Math.max(3.0,3.0+(T0-LAND));
+  const FIRE=FIRE2,LAND=LAND2,t=Math.max(3.0,3.0+(T0-LAND));
   const homeX=W/2,homeY=H*.43;
   if(T0<LAND){
     const bf=Math.min(24,W/(31*.62)*.86),crackY=H*.58+7*bf*1.05;
@@ -455,8 +502,8 @@ function render(now){
 
   ctx.clearRect(0,0,W,H);
   // twinkling ASCII night sky
-  if(T0>2.6){
-    const fadeIn=Math.min(1,(T0-2.6)/2);
+  if(T0>4.6){
+    const fadeIn=Math.min(1,(T0-4.6)/2);
     ctx.font=`600 ${fontPx+1}px ui-monospace,"SF Mono",Menlo,Consolas,monospace`;ctx.textBaseline='top';
     for(const st of STARS){
       const a=fadeIn*(.15+.45*(.5+.5*Math.sin(T0*st.sp+st.ph)));
@@ -499,7 +546,7 @@ function render(now){
     if(a<=0){parts.splice(j,1);continue}
     ctx.globalAlpha=a;ctx.fillStyle=p.col;ctx.fillText(p.c,x,p.y);ctx.globalAlpha=1;
   }
-  if(T0<5)drawIntro(T0,dt);
+  if(T0<8)drawIntro(T0,dt);
   // hearts from taps
   ctx.font=`700 ${Math.round(fontPx*1.9)}px ui-monospace,"SF Mono",Menlo,Consolas,monospace`;
   for(let j=TH.length-1;j>=0;j--){
@@ -539,7 +586,7 @@ function heartBurst(x,y){
 document.getElementById('more').onclick=()=>ui.classList.toggle('hide');
 stage.addEventListener('pointercancel',()=>{dragging=false});
 
-const replay=()=>{startT=performance.now();parts.length=0;ip.length=0;msgEl.dataset.k=''};
+const replay=()=>{startT=performance.now();parts.length=0;ip.length=0;heartXY=null;popped=false;msgEl.dataset.k=''};
 document.getElementById('bBloom').onclick=()=>{ui.classList.add('hide');replay()};
 const bStyle=document.getElementById('bStyle');
 bStyle.onclick=()=>{style=(style+1)%STYLES.length;bStyle.textContent='style: '+STYLES[style]};
