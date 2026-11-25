@@ -512,14 +512,14 @@ function render(now){
   gctx.drawImage(main,0,0,W,H);
 
   cmd.classList.toggle('hide',T0>1.1);
-  down.classList.toggle('on',t>13.5);
-  const shown=t<11.5?0:Math.min([...message].length,Math.floor((t-11.5)*9));
+  down.classList.toggle('on',t>9);
+  const shown=t<6.5?0:Math.min([...message].length,Math.floor((t-6.5)*14));
   const key=shown+'|'+message;
   if(msgEl.dataset.k!==key){
     msgEl.dataset.k=key;msgEl.textContent=[...message].slice(0,shown).join('');
     const done=shown>=[...message].length;
     if(shown>0&&done){const h=document.createElement('span');h.className='heart';h.textContent=' ♥';msgEl.appendChild(h)}
-    else if(t>=10.8){const c=document.createElement('span');c.className='cur';c.textContent='▌';msgEl.appendChild(c)}
+    else if(t>=5.9){const c=document.createElement('span');c.className='cur';c.textContent='▌';msgEl.appendChild(c)}
   }
   requestAnimationFrame(render);
 }
